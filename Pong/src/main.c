@@ -103,11 +103,8 @@ GameInit(void)
 internal void
 GameHandleEvents(void)
 {
-    if (IsKeyPressed(KEY_ESCAPE))
-        GameClose();
-
     // Handle game states
-    else if (IsKeyPressed(KEY_ENTER))
+    if (IsKeyPressed(KEY_ENTER))
     {
         if (gameState == start)
             gameState = play;
