@@ -33,7 +33,8 @@ internal void GameUpdate(f64 delta);
 internal void GameDraw(void);
 internal void GameClose(void);
 
-internal b8 IsColliding(Entity* paddle, Entity* ball);
+internal b8   IsColliding(Entity* paddle, Entity* ball);
+internal void DisplayFPS();
 
 //------------------------------------------------------------------------------
 // Main Entry Point
@@ -86,9 +87,9 @@ GameInit(void)
 {
     // Initialize the players
     v2 paddleSize = { 20.0f, 100.0f };
-    PaddleInit(&leftPlayer, (v2){ 50.0f, 34.0f }, paddleSize);
+    PaddleInit(&leftPlayer, (v2){ 50.0f, 50.0f }, paddleSize);
     PaddleInit(&rightPlayer, (v2){(SCREEN_WIDTH - paddleSize.x) - 50,
-            (SCREEN_HEIGHT - 100.0f) - 34.0f}, paddleSize);
+            (SCREEN_HEIGHT - paddleSize.y) - 50.0f}, paddleSize);
 
     // Initialize the ball
     BallInit(&ball);
@@ -174,13 +175,15 @@ GameDraw(void)
                (v2){(SCREEN_WIDTH / 2.0f) - titleSize.x / 2.0f, 82.0f}, 32, 1,
                WHITE);
 
+    DisplayFPS();
+
     // Display the score
     DrawTextEx(
-        font, score,
-        (v2){((SCREEN_WIDTH / 2.0f) - MeasureTextEx(font, score, 64, 1).x) -
-                 30.0f,
-             SCREEN_HEIGHT / 3.0f},
-        64, 1, WHITE);
+            font, score,
+            (v2){((SCREEN_WIDTH / 2.0f) - MeasureTextEx(font, score, 64, 1).x) -
+            30.0f,
+            SCREEN_HEIGHT / 3.0f},
+            64, 1, WHITE);
 
     score = TextFormat("%d", rightPlayer.score);
     DrawTextEx(font, score,
@@ -223,4 +226,11 @@ IsColliding(Entity* paddle, Entity* ball)
         return false;
 
     return true;
+}
+
+internal void
+DisplayFPS()
+{
+    const char* FPS = TextFormat("FPS: %d", GetFPS());
+    DrawTextEx(font, FPS, (v2){ 10.0f, 10.0f }, 25, 1, GREEN);
 }
