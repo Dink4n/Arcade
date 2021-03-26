@@ -16,8 +16,11 @@ endif()
 # find RayLib
 find_package(raylib 2.5.0 REQUIRED)
 
+# find all the source files
+FILE(GLOB SOURCES "src/*.c")
+
 # create the executable
-add_executable(${PROJECT_NAME} "src/main.c")
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # link with raylib
 target_link_libraries(${PROJECT_NAME} raylib m)
