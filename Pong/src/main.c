@@ -33,7 +33,6 @@ internal void GameUpdate(f64 delta);
 internal void GameDraw(void);
 internal void GameClose(void);
 
-internal b8   IsColliding(Entity* paddle, Entity* ball);
 internal void DisplayFPS();
 
 //------------------------------------------------------------------------------
@@ -140,13 +139,42 @@ GameUpdate(f64 delta)
         rightPlayer.vel.y = 0;
 
     // Handle Collision
-    if (ball.pos.y <= 0 || (ball.pos.y + ball.size.y) >= SCREEN_HEIGHT)
+
+    if (BallCollides(&ball, &leftPlayer))
+    {
+        ball.vel.x *= -1.03;
+        ball.pos.x = leftPlayer.pos.x + 20.0f;
+
+        // keep velocity going in the same direction, but randomize it
+        if (ball.vel.y < 0)
+            ball.vel.y = -GetRandomValue(10, 150);
+        else
+            ball.vel.y = GetRandomValue(10, 150);
+    }
+    else if (BallCollides(&ball, &rightPlayer))
+    {
+        ball.vel.x *= -1.03;
+        ball.pos.x = rightPlayer.pos.x - 20.0f;
+
+        // keep velocity going in the same direction, but randomize it
+        if (ball.vel.y < 0)
+            ball.vel.y = -GetRandomValue(10, 150);
+        else
+            ball.vel.y = GetRandomValue(10, 150);
+    }
+
+    // detect upper and lower boundary collision and reverse if colliding
+    if (ball.pos.y <= 0)
+    {
+        ball.pos.y = 0;
         ball.vel.y *= -1;
 
-    if (IsColliding(&leftPlayer, &ball))
-        ball.vel.x *= -1;
-    else if (IsColliding(&rightPlayer, &ball))
-        ball.vel.x *= -1;
+    }
+    else if (ball.pos.y >= SCREEN_HEIGHT - ball.size.y)
+    {
+        ball.pos.y = SCREEN_HEIGHT - ball.size.y;
+        ball.vel.y *= -1;
+    }
 
     // Handle Score
     if (ball.pos.x <= 0 )
@@ -201,31 +229,6 @@ internal void
 GameClose(void)
 {
     UnloadFont(font);
-}
-
-internal b8
-IsColliding(Entity* paddle, Entity* ball)
-{
-    f32 ballTop = ball->pos.y;
-    f32 ballBot = ball->pos.y + ball->size.y;
-    f32 ballLeft = ball->pos.x;
-    f32 ballRight = ball->pos.x + ball->size.x;
-
-    f32 paddleTop = paddle->pos.y;
-    f32 paddleBot = paddle->pos.y + paddle->size.y;
-    f32 paddleLeft = paddle->pos.x;
-    f32 paddleRight = paddle->pos.x + paddle->size.x;
-
-    if (ballLeft >= paddleRight)
-        return false;
-    if (ballRight <= paddleLeft)
-        return false;
-    if (ballTop >= paddleBot)
-        return false;
-    if (ballBot <= paddleTop)
-        return false;
-
-    return true;
 }
 
 internal void

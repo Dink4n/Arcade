@@ -13,6 +13,7 @@ typedef struct Entity
 } Entity;
 
 void BallInit(Entity* ball);
+bool BallCollides(Entity* ball, Entity* paddle);
 void BallUpdate(Entity* ball, f64 delta);
 void BallRender(Entity* ball);
 void BallReset(Entity* ball);

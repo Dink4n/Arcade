@@ -13,6 +13,31 @@ BallInit(Entity* ball)
     ball->score = 0;
 }
 
+bool
+BallCollides(Entity* ball, Entity* paddle)
+{
+    f32 ballTop = ball->pos.y;
+    f32 ballBot = ball->pos.y + ball->size.y;
+    f32 ballLeft = ball->pos.x;
+    f32 ballRight = ball->pos.x + ball->size.x;
+
+    f32 paddleTop = paddle->pos.y;
+    f32 paddleBot = paddle->pos.y + paddle->size.y;
+    f32 paddleLeft = paddle->pos.x;
+    f32 paddleRight = paddle->pos.x + paddle->size.x;
+
+    if (ballLeft >= paddleRight)
+        return false;
+    if (ballRight <= paddleLeft)
+        return false;
+    if (ballTop >= paddleBot)
+        return false;
+    if (ballBot <= paddleTop)
+        return false;
+
+    return true;
+}
+
 void
 BallUpdate(Entity* ball, f64 delta)
 {
