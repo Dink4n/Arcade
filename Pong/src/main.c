@@ -1,7 +1,10 @@
 #include <raylib.h>
 #include <stdio.h>
 #include <math.h>
-#include "./utils.h"
+
+#include "entity.h"
+#include "types.h"
+#include "constants.h"
 
 //------------------------------------------------------------------------------
 // Types and structure definitions
@@ -12,31 +15,13 @@ typedef enum GameState
     play
 } GameState;
 
-typedef struct Paddle
-{
-    v2 pos;
-    v2 size;
-    f32 vel;
-    i32 score;
-} Paddle;
-
-typedef struct Ball
-{
-    v2 pos;
-    v2 size;
-    v2 vel;
-} Ball;
-
 //------------------------------------------------------------------------------
 // Global variable declarations
 //------------------------------------------------------------------------------
-internal const int g_ScreenWidth = 1270;
-internal const int g_ScreenHeight = 720;
-
 internal GameState gameState;
-internal Paddle leftPlayer = { 0 };
-internal Paddle rightPlayer = { 0 };
-internal Ball ball = { 0 };
+internal Entity leftPlayer = { 0 };
+internal Entity rightPlayer = { 0 };
+internal Entity ball = { 0 };
 
 internal Font font;
 
@@ -48,7 +33,7 @@ internal void GameUpdate(f64 delta);
 internal void GameDraw(void);
 internal void GameClose(void);
 
-internal b8 IsColliding(Paddle* paddle, Ball* ball);
+internal b8 IsColliding(Entity* paddle, Entity* ball);
 
 //------------------------------------------------------------------------------
 // Main Entry Point
@@ -57,7 +42,7 @@ int main(void)
 {
     // Initialization
     //------------------------------------------------------------------------------
-    InitWindow(g_ScreenWidth, g_ScreenHeight, "Game");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game");
     GameInit();
     SetTargetFPS(60);
 
@@ -100,27 +85,13 @@ internal void
 GameInit(void)
 {
     // Initialize the players
-    leftPlayer.pos.x = 50;
-    leftPlayer.pos.y = 34.0f;
-    leftPlayer.size = (v2){ 20.0f, 100.0f };
-    leftPlayer.vel = 500.0f;
-    leftPlayer.score = 0;
-
-    rightPlayer.pos.x = (g_ScreenWidth - rightPlayer.size.x) - 50;
-    rightPlayer.pos.y = (g_ScreenHeight - 100.0f) - 34.0f;
-    rightPlayer.size = (v2){ 20.0f, 100.0f };
-    rightPlayer.vel = 500.0f;
-    leftPlayer.score = 0;
+    v2 paddleSize = { 20.0f, 100.0f };
+    PaddleInit(&leftPlayer, (v2){ 50.0f, 34.0f }, paddleSize);
+    PaddleInit(&rightPlayer, (v2){(SCREEN_WIDTH - paddleSize.x) - 50,
+            (SCREEN_HEIGHT - 100.0f) - 34.0f}, paddleSize);
 
     // Initialize the ball
-    ball.size = (v2){ 20.0f, 20.0f };
-    ball.pos = (v2){
-        (g_ScreenWidth/2.0f)  - ball.size.x/2.0f,
-        (g_ScreenHeight/2.0f) - ball.size.y/2.0f
-    };
-
-    ball.vel.x = GetRandomValue(0, 2) ? 400.0f : -400.0f;
-    ball.vel.y = GetRandomValue(-100.0f, 100.0f);
+    BallInit(&ball);
 
     // Initialize the fonts
     font = LoadFont("assets/font.ttf");
@@ -141,47 +112,34 @@ GameUpdate(f64 delta)
             gameState = start;
 
             // Reset the ball
-            ball.size = (v2){ 20.0f, 20.0f };
-            ball.pos = (v2){
-                (g_ScreenWidth/2.0f) - ball.size.x,
-                (g_ScreenHeight/2.0f) - ball.size.y};
-
-            ball.vel.x = GetRandomValue(0, 2) ? 400.0f : -400.0f;
-            ball.vel.y = GetRandomValue(-100.0f, 100.0f) * 1.5f;
+            BallReset(&ball);
         }
     }
 
     if (gameState == play)
     {
-        ball.pos.x += ball.vel.x * delta;
-        ball.pos.y += ball.vel.y * delta;
+        BallUpdate(&ball, delta);
+        PaddleUpdate(&leftPlayer, delta);
+        PaddleUpdate(&rightPlayer, delta);
     }
 
     // Handle player movement
     if (IsKeyDown(KEY_W))
-        leftPlayer.pos.y = fmax(
-                    0,
-                    leftPlayer.pos.y + -leftPlayer.vel * delta
-                );
+        leftPlayer.vel.y = -PADDLE_SPEED;
     else if (IsKeyDown(KEY_S))
-        leftPlayer.pos.y = fmin(
-                    g_ScreenHeight - leftPlayer.size.y,
-                    leftPlayer.pos.y + leftPlayer.vel * delta
-                );
+        leftPlayer.vel.y = PADDLE_SPEED;
+    else
+        leftPlayer.vel.y = 0;
 
     if (IsKeyDown(KEY_UP))
-        rightPlayer.pos.y = fmax(
-                    0,
-                    rightPlayer.pos.y + -rightPlayer.vel * delta
-                );
+        rightPlayer.vel.y = -PADDLE_SPEED;
     else if (IsKeyDown(KEY_DOWN))
-        rightPlayer.pos.y = fmin(
-                    g_ScreenHeight - rightPlayer.size.y,
-                    rightPlayer.pos.y + rightPlayer.vel * delta
-                );
+        rightPlayer.vel.y = PADDLE_SPEED;
+    else
+        rightPlayer.vel.y = 0;
 
     // Handle Collision
-    if (ball.pos.y <= 0 || (ball.pos.y + ball.size.y) >= g_ScreenHeight)
+    if (ball.pos.y <= 0 || (ball.pos.y + ball.size.y) >= SCREEN_HEIGHT)
         ball.vel.y *= -1;
 
     if (IsColliding(&leftPlayer, &ball))
@@ -190,14 +148,15 @@ GameUpdate(f64 delta)
         ball.vel.x *= -1;
 
     // Handle Score
-    if (ball.pos.x <=0 )
+    if (ball.pos.x <= 0 )
     {
         rightPlayer.score++;
-        gameState = start;
+        BallReset(&ball);
     }
-    else if ((ball.pos.x + ball.size.x) >= g_ScreenWidth)
+    else if ((ball.pos.x + ball.size.x) >= SCREEN_WIDTH)
     {
         leftPlayer.score++;
+        BallReset(&ball);
     }
 }
 
@@ -212,29 +171,27 @@ GameDraw(void)
     // Clear the screen and display the title
     ClearBackground(backgroundColor);
     DrawTextEx(font, "Bong!",
-               (v2){(g_ScreenWidth / 2.0f) - titleSize.x / 2.0f, 82.0f}, 32, 1,
+               (v2){(SCREEN_WIDTH / 2.0f) - titleSize.x / 2.0f, 82.0f}, 32, 1,
                WHITE);
 
     // Display the score
     DrawTextEx(
         font, score,
-        (v2){((g_ScreenWidth / 2.0f) - MeasureTextEx(font, score, 64, 1).x) -
+        (v2){((SCREEN_WIDTH / 2.0f) - MeasureTextEx(font, score, 64, 1).x) -
                  30.0f,
-             g_ScreenHeight / 3.0f},
+             SCREEN_HEIGHT / 3.0f},
         64, 1, WHITE);
 
     score = TextFormat("%d", rightPlayer.score);
     DrawTextEx(font, score,
-               (v2){g_ScreenWidth / 2.0f + 30.0f, g_ScreenHeight / 3.0f}, 64, 1,
+               (v2){SCREEN_WIDTH / 2.0f + 30.0f, SCREEN_HEIGHT / 3.0f}, 64, 1,
                WHITE);
 
     // Draw all the game objects
-    DrawRectangle(leftPlayer.pos.x, leftPlayer.pos.y,
-            leftPlayer.size.x, leftPlayer.size.y, WHITE);
-    DrawRectangle(rightPlayer.pos.x, rightPlayer.pos.y,
-            rightPlayer.size.x, rightPlayer.size.y, WHITE);
+    PaddleRender(&leftPlayer);
+    PaddleRender(&rightPlayer);
 
-    DrawRectangleV(ball.pos, ball.size, WHITE);
+    BallRender(&ball);
 }
 
 internal void
@@ -244,7 +201,7 @@ GameClose(void)
 }
 
 internal b8
-IsColliding(Paddle* paddle, Ball* ball)
+IsColliding(Entity* paddle, Entity* ball)
 {
     f32 ballTop = ball->pos.y;
     f32 ballBot = ball->pos.y + ball->size.y;

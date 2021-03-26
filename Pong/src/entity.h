@@ -2,6 +2,7 @@
 #define ENTITY_H
 
 #include "types.h"
+#include "constants.h"
 
 typedef struct Entity
 {
@@ -11,13 +12,13 @@ typedef struct Entity
     u16 score;
 } Entity;
 
-void BallInit(Entity* ball, i32 posX, i32 posY);
-void BallUpdate(Entity* ball);
+void BallInit(Entity* ball);
+void BallUpdate(Entity* ball, f64 delta);
 void BallRender(Entity* ball);
 void BallReset(Entity* ball);
 
-void PaddleInit(Entity* paddle);
-void PaddleUpdate(Entity* paddle);
+void PaddleInit(Entity* paddle, v2 pos, v2 size);
+void PaddleUpdate(Entity* paddle, f64 delta);
 void PaddleRender(Entity* paddle);
 
 #endif

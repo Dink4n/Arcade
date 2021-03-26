@@ -1,5 +1,5 @@
-#ifndef UTILITY_H
-#define UTILITY_H
+#ifndef TYPES_H
+#define TYPES_H
 
 #include <stdint.h>
 #include <raymath.h>
@@ -7,8 +7,6 @@
 // -----------------------------------------------------------------------------
 // Types(Defs)
 // -----------------------------------------------------------------------------
-#define internal static
-
 typedef int8_t      i8;
 typedef uint8_t     u8;
 typedef int16_t     i16;
