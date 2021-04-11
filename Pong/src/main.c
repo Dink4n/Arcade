@@ -11,21 +11,29 @@
 //------------------------------------------------------------------------------
 typedef enum GameState
 {
-    start,
-    play,
-    serve
+    STATE_START,
+    STATE_PLAY,
+    STATE_SERVE,
+    STATE_DONE
 } GameState;
 
 //------------------------------------------------------------------------------
 // Global variable declarations
 //------------------------------------------------------------------------------
-internal i8 servingPlayer;
-internal GameState gameState;
+
+
 internal Entity leftPlayer = { 0 };
 internal Entity rightPlayer = { 0 };
 internal Entity ball = { 0 };
 
+internal f32 smallSize;
+internal f32 scoreSize;
+internal f32 largeSize;
+internal i8 servingPlayer;
+internal i8 winningPlayer;
+
 internal Font font;
+internal GameState gameState;
 
 //------------------------------------------------------------------------------
 // Game Functions declarations
@@ -36,7 +44,9 @@ internal void GameUpdate(f64 delta);
 internal void GameDraw(void);
 internal void GameClose(void);
 
-internal void DisplayFPS();
+internal void DisplayFPS(void);
+internal void DisplayScore(void);
+internal void DrawCenteredText(const char* text, f32 pos, f32 fontSize);
 
 //------------------------------------------------------------------------------
 // Main Entry Point
@@ -48,6 +58,12 @@ int main(void)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game");
     GameInit();
     SetTargetFPS(60);
+
+    Camera2D camera = { 0 };
+    camera.target = (v2){ 0.0f, 0.0f };
+    camera.offset = (v2){ 0.0f, 0.0f };
+    camera.rotation = 0.0f;
+    camera.zoom = (float)SCREEN_WIDTH / VIRTUAL_WIDTH;
 
     //------------------------------------------------------------------------------
     // Game Loop
@@ -64,9 +80,9 @@ int main(void)
         // Draw
         //------------------------------------------------------------------------------
         BeginDrawing();
-
-        GameDraw();
-
+            BeginMode2D(camera);
+                GameDraw();
+            EndMode2D();
         EndDrawing();
         //------------------------------------------------------------------------------
     }
@@ -88,32 +104,52 @@ internal void
 GameInit(void)
 {
     // Initialize the players
-    v2 paddleSize = { 20.0f, 100.0f };
-    PaddleInit(&leftPlayer, (v2){ 50.0f, 50.0f }, paddleSize);
-    PaddleInit(&rightPlayer, (v2){(SCREEN_WIDTH - paddleSize.x) - 50,
-            (SCREEN_HEIGHT - paddleSize.y) - 50.0f}, paddleSize);
+    v2 paddleSize = { 5.0f, 20.0f };
+
+    servingPlayer = 1;
+    PaddleInit(&leftPlayer, (v2){ 10.0f, 30.0f }, paddleSize);
+    PaddleInit(&rightPlayer,
+            (v2){ (VIRTUAL_WIDTH - paddleSize.x) - 10.0f,
+            (VIRTUAL_HEIGHT - paddleSize.y) - 30.0f }, paddleSize);
 
     // Initialize the ball
     BallInit(&ball);
 
     // Initialize the fonts
     font = LoadFont("assets/font.ttf");
+    smallSize = 8.0f;
+    largeSize = 16.0f;
+    scoreSize = 32.0f;
 }
 
 internal void
 GameHandleEvents(void)
 {
+    if (IsKeyPressed(KEY_SPACE))
+        ToggleFullscreen();
+
     // Handle game states
     if (IsKeyPressed(KEY_ENTER))
     {
-        if (gameState == start)
-            gameState = play;
-        else
+        if (gameState == STATE_START)
+            gameState = STATE_SERVE;
+        else if (gameState == STATE_SERVE)
+            gameState = STATE_PLAY;
+        else if (gameState == STATE_DONE)
         {
-            gameState = start;
+            gameState = STATE_SERVE;
 
-            // Reset the ball
             BallReset(&ball);
+
+            // Reset scores to 0
+            leftPlayer.score = 0;
+            rightPlayer.score = 0;
+
+            // decide serving player as the opposite to who won
+            if (winningPlayer == 1)
+                servingPlayer = 2;
+            else
+                servingPlayer = 1;
         }
     }
 }
@@ -121,13 +157,23 @@ GameHandleEvents(void)
 internal void
 GameUpdate(f64 delta)
 {
-    if (gameState == play)
+    // State handling
+    if (gameState == STATE_SERVE)
+    {
+        ball.vel.y = GetRandomValue(-50, 50);
+        if (servingPlayer == 1)
+            ball.vel.x = GetRandomValue(140, 200);
+        else
+            ball.vel.x = -GetRandomValue(140, 200);
+    }
+
+    else if (gameState == STATE_PLAY)
     {
         // Handle Collision
         if (BallCollides(&ball, &leftPlayer))
         {
             ball.vel.x *= -1.03;
-            ball.pos.x = leftPlayer.pos.x + 20.0f;
+            ball.pos.x = leftPlayer.pos.x + 5;
 
             // keep velocity going in the same direction, but randomize it
             if (ball.vel.y < 0)
@@ -138,7 +184,7 @@ GameUpdate(f64 delta)
         else if (BallCollides(&ball, &rightPlayer))
         {
             ball.vel.x *= -1.03;
-            ball.pos.x = rightPlayer.pos.x - 20.0f;
+            ball.pos.x = rightPlayer.pos.x - 5;
 
             // keep velocity going in the same direction, but randomize it
             if (ball.vel.y < 0)
@@ -154,27 +200,48 @@ GameUpdate(f64 delta)
             ball.vel.y *= -1;
 
         }
-        else if (ball.pos.y >= SCREEN_HEIGHT - ball.size.y)
+        else if (ball.pos.y >= VIRTUAL_HEIGHT - ball.size.y)
         {
-            ball.pos.y = SCREEN_HEIGHT - ball.size.y;
+            ball.pos.y = VIRTUAL_HEIGHT - ball.size.y;
             ball.vel.y *= -1;
         }
-    }
 
-    // Handle Score
-    if (ball.pos.x < 0 )
-    {
-        servingPlayer = 1;
-        rightPlayer.score++;
-        BallReset(&ball);
-        gameState = serve;
-    }
-    else if (ball.pos.x > SCREEN_WIDTH)
-    {
-        servingPlayer = 2;
-        leftPlayer.score++;
-        BallReset(&ball);
-        gameState = serve;
+        // Handle Score
+        if (ball.pos.x < 0 )
+        {
+            // Player 1 is the Left player
+            servingPlayer = 1;
+            rightPlayer.score++;
+
+            if (rightPlayer.score == 10)
+            {
+                // player 2 is the Right player
+                winningPlayer = 2;
+                gameState = STATE_DONE;
+            }
+            else
+            {
+                BallReset(&ball);
+                gameState = STATE_SERVE;
+            }
+        }
+        else if (ball.pos.x > VIRTUAL_WIDTH)
+        {
+            servingPlayer = 2;
+            leftPlayer.score++;
+
+            if (leftPlayer.score == 10)
+            {
+                // Player 1 is left Player
+                winningPlayer = 1;
+                gameState = STATE_DONE;
+            }
+            else
+            {
+                BallReset(&ball);
+                gameState = STATE_SERVE;
+            }
+        }
     }
 
     // Handle player movement
@@ -193,7 +260,7 @@ GameUpdate(f64 delta)
         rightPlayer.vel.y = 0;
 
     // Update entities
-    if (gameState == play)
+    if (gameState == STATE_PLAY)
     {
         BallUpdate(&ball, delta);
     }
@@ -207,35 +274,39 @@ GameDraw(void)
 {
     // Variables
     Color backgroundColor = { 40, 45, 52, 255 };
-    const char* score = TextFormat("%d", leftPlayer.score);
-    v2 titleSize = MeasureTextEx(font, "Bong!", 32, 1);
 
-    // Clear the screen and display the title
     ClearBackground(backgroundColor);
-    DrawTextEx(font, "Bong!",
-               (v2){(SCREEN_WIDTH / 2.0f) - titleSize.x / 2.0f, 82.0f}, 32, 1,
-               WHITE);
 
-    DisplayFPS();
+    DisplayScore();
 
-    // Display the score
-    DrawTextEx(
-            font, score,
-            (v2){((SCREEN_WIDTH / 2.0f) - MeasureTextEx(font, score, 64, 1).x) -
-            30.0f,
-            SCREEN_HEIGHT / 3.0f},
-            64, 1, WHITE);
-
-    score = TextFormat("%d", rightPlayer.score);
-    DrawTextEx(font, score,
-               (v2){SCREEN_WIDTH / 2.0f + 30.0f, SCREEN_HEIGHT / 3.0f}, 64, 1,
-               WHITE);
+    if (gameState == STATE_START)
+    {
+        DrawCenteredText("Welcome to Bong!", 10.0f, smallSize);
+        DrawCenteredText("Press Enter to begin!", 20.0f, smallSize);
+    }
+    else if (gameState == STATE_SERVE)
+    {
+        DrawCenteredText(TextFormat("Player %d's serve!", servingPlayer), 10.0f, smallSize);
+        DrawCenteredText("Press Enter to serve!", 20.0f, smallSize);
+    }
+    else if (gameState == STATE_PLAY)
+    {
+        /* no UI messages to display in play */
+    }
+    else if (gameState == STATE_DONE)
+    {
+        /* UI messages */
+        DrawCenteredText(TextFormat("Player %d wins!", winningPlayer), 10.0f, largeSize);
+        DrawCenteredText("Press Enter to restart!", 30.0f, smallSize);
+    }
 
     // Draw all the game objects
     PaddleRender(&leftPlayer);
     PaddleRender(&rightPlayer);
-
     BallRender(&ball);
+
+    DisplayFPS();
+
 }
 
 internal void
@@ -245,9 +316,41 @@ GameClose(void)
     CloseWindow();
 }
 
+// Displays the current FPS
 internal void
-DisplayFPS()
+DisplayFPS(void)
 {
     const char* FPS = TextFormat("FPS: %d", GetFPS());
-    DrawTextEx(font, FPS, (v2){ 10.0f, 10.0f }, 25, 1, GREEN);
+    DrawTextEx(font, FPS, (v2){ 10.0f, 10.0f }, smallSize, 0, GREEN);
+}
+
+// Simply draws the score to the screen
+internal void
+DisplayScore(void)
+{
+    const char* score;
+
+    // Display the score
+    score = TextFormat("%d", leftPlayer.score);
+    DrawTextEx(
+            font, score,
+            (v2){((VIRTUAL_WIDTH / 2.0f) - MeasureTextEx(font, score, scoreSize, 1).x) -
+            30.0f,
+            VIRTUAL_HEIGHT / 3.0f},
+            32, 1, WHITE);
+
+    score = TextFormat("%d", rightPlayer.score);
+    DrawTextEx(font, score,
+               (v2){VIRTUAL_WIDTH / 2.0f + 30.0f, VIRTUAL_HEIGHT / 3.0f}, scoreSize, 1,
+               WHITE);
+}
+
+// you know it
+internal void
+DrawCenteredText(const char* text, f32 pos, f32 fontSize)
+{
+    v2 textSize = MeasureTextEx(font, text, fontSize, 0);
+    v2 position = { VIRTUAL_WIDTH * 0.5f - textSize.x * 0.5f, pos };
+
+    DrawTextEx(font, text, position, fontSize, 0, WHITE);
 }

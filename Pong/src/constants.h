@@ -3,9 +3,12 @@
 
 #define internal      static
 
-#define SCREEN_WIDTH  1270
+#define VIRTUAL_WIDTH  432
+#define VIRTUAL_HEIGHT 243
+
+#define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
 
-#define PADDLE_SPEED  500.0f
+#define PADDLE_SPEED  200.0f
 
 #endif /* CONSTANTS_H */

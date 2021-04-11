@@ -3,13 +3,13 @@
 void
 BallInit(Entity* ball)
 {
-    ball->size  = (v2){ 20.0f, 20.0f };
+    ball->size  = (v2){ 4.0f, 4.0f };
     ball->pos   = (v2){
-        (SCREEN_WIDTH/2.0f)  - ball->size.x/2.0f,
-        (SCREEN_HEIGHT/2.0f) - ball->size.y/2.0f
+        VIRTUAL_WIDTH / 2.0f  - 2.0f,
+        VIRTUAL_HEIGHT / 2.0f - 2.0f
     };
-    ball->vel.x = GetRandomValue(0, 2) ? 400 : -400;
-    ball->vel.y = GetRandomValue(-200, 200) * 1.5f;
+    ball->vel.y = GetRandomValue(0, 2) ? -100 : 100;
+    ball->vel.x = GetRandomValue(0, 2) ? GetRandomValue(-80, -100) : GetRandomValue(80, 100);
     ball->score = 0;
 }
 
@@ -55,11 +55,11 @@ void
 BallReset(Entity* ball)
 {
     ball->pos   = (v2){
-        (SCREEN_WIDTH/2.0f)  - ball->size.x/2.0f,
-        (SCREEN_HEIGHT/2.0f) - ball->size.y/2.0f
+        (VIRTUAL_WIDTH/2.0f)  - ball->size.x/2.0f,
+        (VIRTUAL_HEIGHT/2.0f) - ball->size.y/2.0f
     };
-    ball->vel.x = GetRandomValue(0, 2) ? 400 : -400;
-    ball->vel.y = GetRandomValue(-200, 200) * 1.5f;
+    ball->vel.x = GetRandomValue(0, 2) ? 50 : -50;
+    ball->vel.y = GetRandomValue(-100, 100);
 }
 
 void
@@ -80,7 +80,7 @@ PaddleUpdate(Entity* paddle, f64 delta)
                 paddle->pos.y + paddle->vel.y * delta);
     else
         paddle->pos.y = fmin(
-                SCREEN_HEIGHT - paddle->size.y,
+                VIRTUAL_HEIGHT - paddle->size.y,
                 paddle->pos.y + paddle->vel.y * delta);
 }
 
