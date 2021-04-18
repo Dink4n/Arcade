@@ -21,7 +21,6 @@ typedef enum GameState
 // Global variable declarations
 //------------------------------------------------------------------------------
 
-
 internal Entity leftPlayer = { 0 };
 internal Entity rightPlayer = { 0 };
 internal Entity ball = { 0 };
@@ -34,6 +33,10 @@ internal i8 winningPlayer;
 
 internal Font font;
 internal GameState gameState;
+
+internal Sound score = { 0 };
+internal Sound wallHit = { 0 };
+internal Sound paddleHit = { 0 };
 
 //------------------------------------------------------------------------------
 // Game Functions declarations
@@ -59,11 +62,18 @@ int main(void)
     GameInit();
     SetTargetFPS(60);
 
+    InitAudioDevice(); // Initialize the audio system
+
     Camera2D camera = { 0 };
+
+    f32 scaleToFitHeight = SCREEN_HEIGHT / VIRTUAL_HEIGHT;
+    f32 scaleToFitWidth = SCREEN_WIDTH / VIRTUAL_WIDTH;
+    f32 scale = fminf(scaleToFitWidth, scaleToFitHeight);
+
     camera.target = (v2){ 0.0f, 0.0f };
     camera.offset = (v2){ 0.0f, 0.0f };
     camera.rotation = 0.0f;
-    camera.zoom = (float)SCREEN_WIDTH / VIRTUAL_WIDTH;
+    camera.zoom = scale;
 
     //------------------------------------------------------------------------------
     // Game Loop
@@ -120,6 +130,11 @@ GameInit(void)
     smallSize = 8.0f;
     largeSize = 16.0f;
     scoreSize = 32.0f;
+
+    // Initialize the sounds
+    score = LoadSound("assets/sounds/score.wav");
+    wallHit = LoadSound("assets/sounds/wall_hit.wav");
+    paddleHit = LoadSound("assets/sounds/paddle_hit.wav");
 }
 
 internal void
@@ -180,6 +195,8 @@ GameUpdate(f64 delta)
                 ball.vel.y = -GetRandomValue(10, 150);
             else
                 ball.vel.y = GetRandomValue(10, 150);
+
+            PlaySound(paddleHit);
         }
         else if (BallCollides(&ball, &rightPlayer))
         {
@@ -191,6 +208,8 @@ GameUpdate(f64 delta)
                 ball.vel.y = -GetRandomValue(10, 150);
             else
                 ball.vel.y = GetRandomValue(10, 150);
+
+            PlaySound(paddleHit);
         }
 
         // detect upper and lower boundary collision and reverse if colliding
@@ -199,11 +218,14 @@ GameUpdate(f64 delta)
             ball.pos.y = 0;
             ball.vel.y *= -1;
 
+            PlaySound(wallHit);
         }
         else if (ball.pos.y >= VIRTUAL_HEIGHT - ball.size.y)
         {
             ball.pos.y = VIRTUAL_HEIGHT - ball.size.y;
             ball.vel.y *= -1;
+
+            PlaySound(wallHit);
         }
 
         // Handle Score
@@ -224,6 +246,8 @@ GameUpdate(f64 delta)
                 BallReset(&ball);
                 gameState = STATE_SERVE;
             }
+
+            PlaySound(score);
         }
         else if (ball.pos.x > VIRTUAL_WIDTH)
         {
@@ -241,6 +265,8 @@ GameUpdate(f64 delta)
                 BallReset(&ball);
                 gameState = STATE_SERVE;
             }
+
+            PlaySound(score);
         }
     }
 
@@ -312,7 +338,12 @@ GameDraw(void)
 internal void
 GameClose(void)
 {
+    UnloadSound(paddleHit);
+    UnloadSound(wallHit);
+    UnloadSound(score);
     UnloadFont(font);
+
+    CloseAudioDevice();
     CloseWindow();
 }
 

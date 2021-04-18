@@ -3,11 +3,11 @@
 
 #define internal      static
 
-#define VIRTUAL_WIDTH  432
-#define VIRTUAL_HEIGHT 243
+#define VIRTUAL_WIDTH  432.0f
+#define VIRTUAL_HEIGHT 243.0f
 
-#define SCREEN_WIDTH  1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH  1280.0f
+#define SCREEN_HEIGHT 720.0f
 
 #define PADDLE_SPEED  200.0f
 
